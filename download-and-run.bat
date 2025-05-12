@@ -1,11 +1,13 @@
 @echo off
-echo Doctor Appointment System - Download and Run
-echo ==========================================
+echo Doctor Appointment System with Supabase - Download and Run
+echo ===================================================
 echo.
 
 echo Setting up environment...
 set TEMP_DIR=temp
+set LIBS_DIR=libs
 if not exist %TEMP_DIR% mkdir %TEMP_DIR%
+if not exist %LIBS_DIR% mkdir %LIBS_DIR%
 
 echo Downloading JavaFX 21.0.2 (compatible with Java 21)...
 powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://download2.gluonhq.com/openjfx/21.0.2/openjfx-21.0.2_windows-x64_bin-sdk.zip' -OutFile '%TEMP_DIR%\javafx.zip'}"
@@ -13,21 +15,27 @@ powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.Secur
 echo Extracting JavaFX...
 powershell -Command "& {Expand-Archive -Force '%TEMP_DIR%\javafx.zip' -DestinationPath '%TEMP_DIR%'}"
 
+echo Downloading Supabase dependencies...
+powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://repo1.maven.org/maven2/io/github/supabase-community/supabase-java/0.0.2/supabase-java-0.0.2.jar' -OutFile '%LIBS_DIR%\supabase-java-0.0.2.jar'}"
+powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://repo1.maven.org/maven2/org/json/json/20230618/json-20230618.jar' -OutFile '%LIBS_DIR%\json-20230618.jar'}"
+
 set JAVAFX_PATH=%CD%\%TEMP_DIR%\javafx-sdk-21.0.2\lib
+set LIBS_PATH=%CD%\%LIBS_DIR%\*.jar
 
 echo JavaFX extracted to: %JAVAFX_PATH%
+echo Dependencies downloaded to: %LIBS_PATH%
 echo.
 
 echo Compiling Java files...
 if not exist bin mkdir bin
-javac -d bin --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml src\main\java\DoctorAppointmentSystem\*.java
+javac -d bin -cp ".;%LIBS_PATH%" --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml src\main\java\DoctorAppointmentSystem\*.java
 
 echo Copying resources...
 if not exist bin\resources mkdir bin\resources
 copy src\main\resources\*.fxml bin\resources\
 
 echo Running application...
-java --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml -cp "bin;bin\resources" DoctorAppointmentSystem.Main
+java -cp "bin;bin\resources;%LIBS_PATH%" --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml DoctorAppointmentSystem.Main
 
 echo.
 echo Application closed. 

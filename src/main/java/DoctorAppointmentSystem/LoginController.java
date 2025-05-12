@@ -25,13 +25,36 @@ public class LoginController {
     @FXML
     private Label errorLabel;
     
+    private DatabaseService databaseService;
+    
+    @FXML
+    private void initialize() {
+        // Initialize database service
+        databaseService = DatabaseService.getInstance(
+            Config.SUPABASE_URL,
+            Config.SUPABASE_API_KEY
+        );
+    }
+    
     @FXML
     private void handleLoginButton(ActionEvent event) {
         String username = usernameField.getText();
         String password = passwordField.getText();
         
-        // Simple authentication (default: admin/admin)
-        if (username.equals("admin") && password.equals("admin")) {
+        // For development/demo - allow local admin login
+        boolean isLocalAdminLogin = username.equals(Config.ADMIN_USERNAME) && 
+                                  password.equals(Config.ADMIN_PASSWORD);
+        
+        // Try to authenticate with Supabase
+        boolean isSupabaseLogin = false;
+        try {
+            isSupabaseLogin = databaseService.authenticateUser(username, password);
+        } catch (Exception e) {
+            System.err.println("Supabase authentication error: " + e.getMessage());
+            // Continue with local authentication if Supabase fails
+        }
+        
+        if (isLocalAdminLogin || isSupabaseLogin) {
             try {
                 // Load the dashboard view
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/dashboard.fxml"));
