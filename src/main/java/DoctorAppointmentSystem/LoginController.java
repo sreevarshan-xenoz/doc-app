@@ -59,6 +59,9 @@ public class LoginController {
     @FXML
     private StackPane contentStack;
     
+    @FXML
+    private Button registerButton;
+    
     private DatabaseService databaseService;
     
     @FXML
@@ -68,6 +71,14 @@ public class LoginController {
             Config.SUPABASE_URL,
             Config.SUPABASE_API_KEY
         );
+    }
+    
+    // Method to pre-fill username after registration
+    public void prefillUsername(String username) {
+        if (username != null && !username.isEmpty()) {
+            usernameField.setText(username);
+            loginErrorLabel.setText("Registration successful! Please log in.");
+        }
     }
     
     @FXML
@@ -91,6 +102,12 @@ public class LoginController {
         System.out.println("Authentication result: " + (user != null ? "Success" : "Failed"));
         
         if (user != null) {
+            // Check if user is verified
+            if (!user.isVerified()) {
+                loginErrorLabel.setText("Your email is not verified. Please check your email for verification instructions.");
+                return;
+            }
+            
             System.out.println("User authenticated as: " + user.getUsername() + " with role: " + user.getRole());
             
             // Store the current user in Config
@@ -182,22 +199,41 @@ public class LoginController {
         
         registerErrorLabel.setText("Creating account...");
         
-        // Create new user
-        User newUser = new User(0, username, password, role, email);
+        // Create new user (not verified yet)
+        User newUser = new User(0, username, password, role, email, false);
         
-        // Register user
-        boolean success = databaseService.registerUser(newUser);
+        // Generate OTP for email verification
+        String otp = EmailService.generateOTP();
         
-        if (success) {
-            // Show success message and switch back to login
-            loginErrorLabel.setText("Registration successful! Please login.");
-            handleBackToLoginButton(null);
-            
-            // Pre-fill the login fields
-            usernameField.setText(username);
-            passwordField.clear();
+        // Store OTP with pending user
+        EmailService.storeOTP(email, otp, newUser);
+        
+        // Send verification email
+        boolean emailSent = EmailService.sendVerificationEmail(email, otp);
+        
+        if (emailSent) {
+            try {
+                // Load verification screen
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/verification.fxml"));
+                Parent verificationView = loader.load();
+                
+                // Get the controller and pass the email
+                VerificationController verificationController = loader.getController();
+                verificationController.initialize(email);
+                
+                // Get the current stage
+                Stage currentStage = (Stage) registerButton.getScene().getWindow();
+                
+                // Set the verification scene
+                currentStage.setScene(new Scene(verificationView, 600, 400));
+                currentStage.setTitle("Doctor Appointment System - Email Verification");
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                registerErrorLabel.setText("Error loading verification screen: " + e.getMessage());
+            }
         } else {
-            registerErrorLabel.setText("Registration failed. Username may be taken.");
+            registerErrorLabel.setText("Failed to send verification email. Please check your email address.");
         }
     }
 } 

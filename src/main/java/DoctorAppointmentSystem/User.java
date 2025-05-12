@@ -6,6 +6,7 @@ public class User {
     private String password;
     private String role;
     private String email;
+    private boolean verified;
     
     // Constructor
     public User(int id, String username, String password, String role, String email) {
@@ -14,6 +15,17 @@ public class User {
         this.password = password;
         this.role = role;
         this.email = email;
+        this.verified = false; // Default to not verified
+    }
+    
+    // Constructor with verification status
+    public User(int id, String username, String password, String role, String email, boolean verified) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.role = role;
+        this.email = email;
+        this.verified = verified;
     }
     
     // Simplified constructor for login
@@ -61,6 +73,14 @@ public class User {
     
     public void setEmail(String email) {
         this.email = email;
+    }
+    
+    public boolean isVerified() {
+        return verified;
+    }
+    
+    public void setVerified(boolean verified) {
+        this.verified = verified;
     }
     
     public boolean isAdmin() {

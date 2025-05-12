@@ -134,23 +134,41 @@ public class DashboardController implements Initializable {
             // Clear current appointments
             appointments.clear();
             
-            // Load appointments from Supabase
-            List<Appointment> dbAppointments = databaseService.getAllAppointments();
-            
-            // If patient, filter to only show their appointments
-            if (Config.isPatient()) {
-                String patientName = Config.getCurrentUser().getUsername();
-                for (Appointment appointment : dbAppointments) {
-                    if (appointment.getPatientName().equals(patientName)) {
-                        appointments.add(appointment);
-                    }
-                }
-            } else {
-                // Add all appointments for admin
-                appointments.addAll(dbAppointments);
+            User currentUser = Config.getCurrentUser();
+            if (currentUser == null) {
+                statusLabel.setText("Error: No user logged in");
+                return;
             }
             
-            statusLabel.setText("Appointments loaded successfully");
+            // Load appointments from Supabase based on user role
+            List<Appointment> dbAppointments;
+            
+            if (currentUser.isAdmin()) {
+                // Admin can see all appointments
+                dbAppointments = databaseService.getAllAppointments();
+                statusLabel.setText("Loaded all appointments");
+            } else if (currentUser.isPatient()) {
+                // Patient can only see their own appointments
+                dbAppointments = databaseService.getPatientAppointments(currentUser.getId());
+                statusLabel.setText("Loaded your appointments");
+            } else {
+                statusLabel.setText("Unknown user role: " + currentUser.getRole());
+                return;
+            }
+            
+            // Add to observable list
+            appointments.addAll(dbAppointments);
+            
+            if (appointments.isEmpty()) {
+                if (currentUser.isPatient()) {
+                    statusLabel.setText("You have no scheduled appointments");
+                } else {
+                    statusLabel.setText("No appointments found in the system");
+                }
+            } else {
+                int count = appointments.size();
+                statusLabel.setText("Found " + count + " appointment" + (count > 1 ? "s" : ""));
+            }
         } catch (Exception e) {
             statusLabel.setText("Error loading appointments: " + e.getMessage());
             e.printStackTrace();
@@ -179,6 +197,12 @@ public class DashboardController implements Initializable {
     @FXML
     private void handleBookAppointmentButton(ActionEvent event) {
         try {
+            User currentUser = Config.getCurrentUser();
+            if (currentUser == null) {
+                statusLabel.setText("Error: No user logged in");
+                return;
+            }
+            
             // Get input values
             String patientName = patientNameField.getText().trim();
             
@@ -202,21 +226,24 @@ public class DashboardController implements Initializable {
             
             statusLabel.setText("Sending appointment to database...");
             
-            // Save appointment to Supabase - with current user if logged in
-            boolean success = databaseService.insertAppointment(newAppointment, Config.getCurrentUser());
+            // Save appointment to Supabase with current user ID
+            boolean success = databaseService.insertAppointment(newAppointment, currentUser);
             
             if (success) {
                 // Add to local list
                 appointments.add(newAppointment);
                 
                 // Clear input fields
-                if (Config.isAdmin()) {
+                if (currentUser.isAdmin()) {
                     patientNameField.clear();
                 }
                 appointmentDatePicker.setValue(null);
                 
                 // Update status
                 statusLabel.setText("Appointment booked successfully!");
+                
+                // Refresh the appointment list to ensure it's up to date
+                loadAppointmentsFromDatabase();
             } else {
                 statusLabel.setText("Failed to save appointment to database. Check console for details.");
                 System.err.println("API Key length: " + Config.SUPABASE_API_KEY.length());

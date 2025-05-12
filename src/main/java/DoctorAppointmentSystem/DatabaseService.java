@@ -332,9 +332,12 @@ public class DatabaseService {
                             String email = extractJsonValue(jsonStr, "email");
                             String storedHash = extractJsonValue(jsonStr, "password_hash");
                             String salt = extractJsonValue(jsonStr, "password_salt");
+                            String verifiedStr = extractJsonValue(jsonStr, "verified");
+                            boolean verified = "true".equalsIgnoreCase(verifiedStr);
                             
                             System.out.println("Extracted ID: " + idStr);
                             System.out.println("Extracted role: " + role);
+                            System.out.println("Verified: " + verified);
                             
                             if (idStr == null || storedHash == null || salt == null) {
                                 System.err.println("Failed to extract required user data from response");
@@ -347,9 +350,15 @@ public class DatabaseService {
                                 return null;
                             }
                             
+                            // Check if user is verified
+                            if (!verified) {
+                                System.out.println("User is not verified");
+                                // We'll return the user but with a flag indicating they're not verified
+                            }
+                            
                             int id = Integer.parseInt(idStr);
                             System.out.println("User authenticated successfully - ID: " + id + ", Role: " + role);
-                            return new User(id, username, null, role, email); // Don't store the password in memory
+                            return new User(id, username, null, role, email, verified); // Include verification status
                         } catch (NumberFormatException e) {
                             System.err.println("Error parsing user ID: " + e.getMessage());
                             System.err.println("JSON response: " + jsonStr);
@@ -391,8 +400,8 @@ public class DatabaseService {
             
             // Create JSON payload with hashed password and salt
             String json = String.format(
-                "{\"username\":\"%s\",\"password_hash\":\"%s\",\"password_salt\":\"%s\",\"role\":\"%s\",\"email\":\"%s\"}",
-                user.getUsername(), passwordHash, salt, user.getRole(), user.getEmail());
+                "{\"username\":\"%s\",\"password_hash\":\"%s\",\"password_salt\":\"%s\",\"role\":\"%s\",\"email\":\"%s\",\"verified\":%b}",
+                user.getUsername(), passwordHash, salt, user.getRole(), user.getEmail(), user.isVerified());
             
             System.out.println("Registering new user: " + user.getUsername() + " with role: " + user.getRole());
             
@@ -433,5 +442,74 @@ public class DatabaseService {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // Get patient-specific appointments
+    public List<Appointment> getPatientAppointments(int userId) {
+        List<Appointment> appointments = new ArrayList<>();
+        
+        try {
+            // Create connection with filter for user_id
+            String filter = String.format("user_id=eq.%d", userId);
+            URL url = new URL(SUPABASE_URL + "/rest/v1/" + APPOINTMENTS_TABLE + "?select=*&" + filter);
+            
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
+            
+            // Get response
+            int responseCode = conn.getResponseCode();
+            
+            if (responseCode == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String inputLine;
+                StringBuilder response = new StringBuilder();
+                
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                
+                String jsonStr = response.toString();
+                
+                // Parse JSON response
+                if (jsonStr.startsWith("[") && jsonStr.endsWith("]")) {
+                    if (!jsonStr.equals("[]")) {
+                        jsonStr = jsonStr.substring(1, jsonStr.length() - 1);
+                        
+                        // Split by objects
+                        int depth = 0;
+                        int start = 0;
+                        
+                        for (int i = 0; i < jsonStr.length(); i++) {
+                            char c = jsonStr.charAt(i);
+                            
+                            if (c == '{') {
+                                if (depth == 0) {
+                                    start = i;
+                                }
+                                depth++;
+                            } else if (c == '}') {
+                                depth--;
+                                if (depth == 0) {
+                                    String obj = jsonStr.substring(start, i + 1);
+                                    parseAppointment(obj, appointments);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                System.err.println("Error fetching patient appointments: " + responseCode);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching patient appointments: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return appointments;
     }
 } 
