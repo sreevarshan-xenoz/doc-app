@@ -81,16 +81,18 @@ public class LoginController {
             return;
         }
         
+        loginErrorLabel.setText("Authenticating...");
+        
+        System.out.println("Attempting login with username: " + username);
+        
         // Try to authenticate with Supabase
         User user = databaseService.authenticateUser(username, password);
         
-        // For development/demo - allow local admin login if database authentication fails
-        if (user == null && username.equals(Config.ADMIN_USERNAME) && password.equals(Config.ADMIN_PASSWORD)) {
-            // Create a local admin user
-            user = new User(0, Config.ADMIN_USERNAME, Config.ADMIN_PASSWORD, "admin", "admin@example.com");
-        }
+        System.out.println("Authentication result: " + (user != null ? "Success" : "Failed"));
         
         if (user != null) {
+            System.out.println("User authenticated as: " + user.getUsername() + " with role: " + user.getRole());
+            
             // Store the current user in Config
             Config.setCurrentUser(user);
             
@@ -99,12 +101,15 @@ public class LoginController {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/dashboard.fxml"));
                 Parent dashboardView = loader.load();
                 
+                // Get the controller
+                DashboardController dashboardController = loader.getController();
+                
                 // Get the current stage
                 Stage currentStage = (Stage) loginButton.getScene().getWindow();
                 
                 // Set the dashboard scene
                 currentStage.setScene(new Scene(dashboardView, 800, 600));
-                currentStage.setTitle("Doctor Appointment System - Dashboard");
+                currentStage.setTitle("Doctor Appointment System - Dashboard (" + user.getRole() + ")");
                 
             } catch (Exception e) {
                 e.printStackTrace();

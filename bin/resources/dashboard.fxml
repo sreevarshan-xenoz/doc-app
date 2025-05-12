@@ -13,16 +13,26 @@
     <!-- Header -->
     <top>
         <VBox alignment="CENTER" style="-fx-background-color: #4285f4; -fx-padding: 15;">
-            <Label text="Doctor Appointment Management System" style="-fx-text-fill: white; -fx-font-weight: bold;">
-                <font>
-                    <Font size="20"/>
-                </font>
-            </Label>
-            <Label text="Dashboard" style="-fx-text-fill: white;">
-                <font>
-                    <Font size="14"/>
-                </font>
-            </Label>
+            <HBox alignment="CENTER">
+                <HBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                    <Label text="Doctor Appointment Management System" style="-fx-text-fill: white; -fx-font-weight: bold;">
+                        <font>
+                            <Font size="20"/>
+                        </font>
+                    </Label>
+                </HBox>
+                <Button fx:id="logoutButton" text="Logout" onAction="#handleLogoutButton"
+                        style="-fx-background-color: #ea4335; -fx-text-fill: white;" />
+            </HBox>
+            <HBox alignment="CENTER">
+                <Label text="Dashboard" style="-fx-text-fill: white;">
+                    <font>
+                        <Font size="14"/>
+                    </font>
+                </Label>
+                <Region HBox.hgrow="ALWAYS" />
+                <Label fx:id="welcomeLabel" text="Welcome, User" style="-fx-text-fill: white;" />
+            </HBox>
         </VBox>
     </top>
     
@@ -52,6 +62,17 @@
                     style="-fx-background-color: #4285f4; -fx-text-fill: white;" maxWidth="Infinity" />
             
             <Label fx:id="statusLabel" style="-fx-text-fill: #4caf50;" wrapText="true" />
+            
+            <!-- Admin Controls Section -->
+            <VBox fx:id="adminControls" spacing="10" style="-fx-padding-top: 20; -fx-border-color: #ddd; -fx-border-width: 1 0 0 0; -fx-padding: 10 0 0 0;">
+                <Label text="Admin Controls" style="-fx-font-weight: bold;">
+                    <font>
+                        <Font size="14"/>
+                    </font>
+                </Label>
+                <Label text="As an admin, you can manage all appointments and patient accounts" 
+                       style="-fx-font-size: 12; -fx-text-fill: #757575;" wrapText="true" />
+            </VBox>
         </VBox>
     </left>
     
