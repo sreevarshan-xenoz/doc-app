@@ -18,6 +18,7 @@ public class DatabaseService {
     private final String SUPABASE_URL;
     private final String SUPABASE_API_KEY;
     private final String APPOINTMENTS_TABLE = "appointments";
+    private final String USERS_TABLE = "users";
     
     private DatabaseService(String supabaseUrl, String supabaseApiKey) {
         this.SUPABASE_URL = supabaseUrl;
@@ -36,7 +37,7 @@ public class DatabaseService {
         return instance;
     }
     
-    public boolean insertAppointment(Appointment appointment) {
+    public boolean insertAppointment(Appointment appointment, User user) {
         try {
             // Check if credentials are valid
             if (SUPABASE_URL == null || SUPABASE_URL.isEmpty() || 
@@ -46,8 +47,17 @@ public class DatabaseService {
             }
             
             // Create JSON payload
-            String json = String.format("{\"patient_name\":\"%s\",\"appointment_date\":\"%s\"}",
-                appointment.getPatientName(), appointment.getDate());
+            String json;
+            
+            if (user != null) {
+                json = String.format(
+                    "{\"patient_name\":\"%s\",\"appointment_date\":\"%s\",\"user_id\":%d}",
+                    appointment.getPatientName(), appointment.getDate(), user.getId());
+            } else {
+                json = String.format(
+                    "{\"patient_name\":\"%s\",\"appointment_date\":\"%s\"}",
+                    appointment.getPatientName(), appointment.getDate());
+            }
             
             System.out.println("Sending to Supabase: " + json);
             System.out.println("URL: " + SUPABASE_URL + "/rest/v1/" + APPOINTMENTS_TABLE);
@@ -100,6 +110,10 @@ public class DatabaseService {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    public boolean insertAppointment(Appointment appointment) {
+        return insertAppointment(appointment, null);
     }
     
     public List<Appointment> getAllAppointments() {
@@ -235,5 +249,115 @@ public class DatabaseService {
     public boolean authenticateUser(String email, String password) {
         // For simplicity, use the local auth instead of Supabase Auth
         return email.equals(Config.ADMIN_USERNAME) && password.equals(Config.ADMIN_PASSWORD);
+    }
+
+    public User authenticateUser(String username, String password) {
+        try {
+            // Check if credentials are valid
+            if (SUPABASE_URL == null || SUPABASE_URL.isEmpty() || 
+                SUPABASE_API_KEY == null || SUPABASE_API_KEY.isEmpty()) {
+                System.err.println("Error: Supabase credentials are not properly configured");
+                return null;
+            }
+            
+            // Create URL with filter
+            String filter = String.format("username=eq.%s&password=eq.%s", username, password);
+            URL url = new URL(SUPABASE_URL + "/rest/v1/" + USERS_TABLE + "?select=*&" + filter);
+            
+            // Create connection
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
+            
+            // Get response
+            int responseCode = conn.getResponseCode();
+            
+            if (responseCode == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String inputLine;
+                StringBuilder response = new StringBuilder();
+                
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                
+                String jsonStr = response.toString();
+                System.out.println("Auth response: " + jsonStr);
+                
+                // Parse JSON array response
+                if (jsonStr.startsWith("[") && jsonStr.endsWith("]")) {
+                    jsonStr = jsonStr.substring(1, jsonStr.length() - 1);
+                    
+                    // If we have a user object
+                    if (!jsonStr.isEmpty()) {
+                        // Extract user data
+                        int id = Integer.parseInt(extractJsonValue(jsonStr, "id"));
+                        String role = extractJsonValue(jsonStr, "role");
+                        String email = extractJsonValue(jsonStr, "email");
+                        
+                        return new User(id, username, password, role, email);
+                    }
+                }
+            } else {
+                System.out.println("Authentication failed with response code: " + responseCode);
+            }
+            
+            return null;
+        } catch (Exception e) {
+            System.err.println("Error authenticating user: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public boolean registerUser(User user) {
+        try {
+            // Create JSON payload
+            String json = String.format(
+                "{\"username\":\"%s\",\"password\":\"%s\",\"role\":\"%s\",\"email\":\"%s\"}",
+                user.getUsername(), user.getPassword(), user.getRole(), user.getEmail());
+            
+            System.out.println("Registering new user: " + json);
+            
+            // Create connection
+            URL url = new URL(SUPABASE_URL + "/rest/v1/" + USERS_TABLE);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
+            conn.setRequestProperty("Prefer", "return=minimal");
+            conn.setDoOutput(true);
+            
+            // Send data
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = json.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+            
+            // Get response
+            int responseCode = conn.getResponseCode();
+            System.out.println("Register response code: " + responseCode);
+            
+            if (responseCode >= 400) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        response.append(line);
+                    }
+                    System.out.println("Error response: " + response.toString());
+                }
+            }
+            
+            return responseCode >= 200 && responseCode < 300;
+        } catch (Exception e) {
+            System.err.println("Error registering user: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 } 

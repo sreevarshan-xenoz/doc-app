@@ -16,6 +16,9 @@ public class Config {
     public static final String ADMIN_USERNAME = "admin";
     public static final String ADMIN_PASSWORD = "admin";
     
+    // Current logged in user
+    private static User currentUser;
+    
     static {
         loadEnvVariables();
     }
@@ -72,5 +75,26 @@ public class Config {
             System.err.println("Unexpected error loading configuration: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    // Methods to handle current user
+    public static void setCurrentUser(User user) {
+        currentUser = user;
+    }
+
+    public static User getCurrentUser() {
+        return currentUser;
+    }
+
+    public static boolean isLoggedIn() {
+        return currentUser != null;
+    }
+
+    public static boolean isAdmin() {
+        return currentUser != null && currentUser.isAdmin();
+    }
+
+    public static boolean isPatient() {
+        return currentUser != null && currentUser.isPatient();
     }
 } 
