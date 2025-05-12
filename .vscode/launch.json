@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch Doctor Appointment System",
+            "request": "launch",
+            "mainClass": "DoctorAppointmentSystem.Main",
+            "projectName": "DoctorAppointmentSystem",
+            "vmArgs": "--module-path ${env:PATH_TO_FX} --add-modules javafx.controls,javafx.fxml",
+            "classpath": [
+                "${workspaceFolder}/src/main/java",
+                "${workspaceFolder}/src/main/resources",
+                "${env:PATH_TO_FX}/*"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "Launch with Java",
+            "request": "launch",
+            "mainClass": "DoctorAppointmentSystem.Main",
+            "classpath": [
+                "${workspaceFolder}/src/main/java",
+                "${workspaceFolder}/src/main/resources",
+                "${env:PATH_TO_FX}/*"
+            ],
+            "vmArgs": "--module-path ${env:PATH_TO_FX} --add-modules javafx.controls,javafx.fxml"
+        }
+    ]
+} 

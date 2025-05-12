@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="DoctorAppointmentSystem.DashboardController"
+            style="-fx-background-color: #f5f5f5;">
+    
+    <!-- Header -->
+    <top>
+        <VBox alignment="CENTER" style="-fx-background-color: #4285f4; -fx-padding: 15;">
+            <Label text="Doctor Appointment Management System" style="-fx-text-fill: white; -fx-font-weight: bold;">
+                <font>
+                    <Font size="20"/>
+                </font>
+            </Label>
+            <Label text="Dashboard" style="-fx-text-fill: white;">
+                <font>
+                    <Font size="14"/>
+                </font>
+            </Label>
+        </VBox>
+    </top>
+    
+    <!-- Appointment Booking Form -->
+    <left>
+        <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);">
+            <Label text="Book New Appointment" style="-fx-font-weight: bold;">
+                <font>
+                    <Font size="16"/>
+                </font>
+            </Label>
+            
+            <GridPane hgap="10" vgap="15">
+                <columnConstraints>
+                    <ColumnConstraints minWidth="100" />
+                    <ColumnConstraints minWidth="200" />
+                </columnConstraints>
+                
+                <Label text="Patient Name:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                <TextField fx:id="patientNameField" promptText="Enter full name" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                
+                <Label text="Appointment Date:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                <DatePicker fx:id="appointmentDatePicker" promptText="Select date" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            </GridPane>
+            
+            <Button fx:id="bookAppointmentButton" text="Book Appointment" onAction="#handleBookAppointmentButton"
+                    style="-fx-background-color: #4285f4; -fx-text-fill: white;" maxWidth="Infinity" />
+            
+            <Label fx:id="statusLabel" style="-fx-text-fill: #4caf50;" wrapText="true" />
+        </VBox>
+    </left>
+    
+    <!-- Appointments List -->
+    <center>
+        <VBox spacing="10" style="-fx-padding: 20;">
+            <Label text="Scheduled Appointments" style="-fx-font-weight: bold;">
+                <font>
+                    <Font size="16"/>
+                </font>
+            </Label>
+            
+            <ListView fx:id="appointmentsListView" VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);" />
+        </VBox>
+    </center>
+    
+    <!-- Footer -->
+    <bottom>
+        <HBox alignment="CENTER" style="-fx-padding: 10; -fx-background-color: #eeeeee;">
+            <Label text="© 2023 Doctor Appointment System" style="-fx-text-fill: #757575;" />
+        </HBox>
+    </bottom>
+    
+</BorderPane> 

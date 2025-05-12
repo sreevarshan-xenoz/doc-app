@@ -1,0 +1,51 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.13'
+}
+
+group 'DoctorAppointmentSystem'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 11
+targetCompatibility = 11
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // JavaFX dependencies will be managed by the JavaFX plugin
+}
+
+javafx {
+    version = "17.0.2"
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+application {
+    mainClass = 'DoctorAppointmentSystem.Main'
+}
+
+// This ensures the resources are included in the build
+sourceSets {
+    main {
+        resources {
+            srcDirs = ["src/main/resources"]
+        }
+    }
+}
+
+// This downloads JavaFX jars to the lib directory
+task downloadJavaFX(type: Copy) {
+    from configurations.runtimeClasspath
+    into 'lib'
+    include '**/*.jar'
+}
+
+// Make the run task depend on downloadJavaFX
+run.dependsOn downloadJavaFX
+
+run {
+    // Configure JavaFX runtime arguments if needed
+} 

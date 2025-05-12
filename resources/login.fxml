@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.text.Font?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="DoctorAppointmentSystem.LoginController"
+      alignment="CENTER" 
+      spacing="20" 
+      style="-fx-background-color: #f5f5f5;">
+      
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+    
+    <Label text="Doctor Appointment System" style="-fx-font-weight: bold;">
+        <font>
+            <Font size="24"/>
+        </font>
+    </Label>
+    
+    <Label text="Login to your account" style="-fx-font-style: italic;">
+        <font>
+            <Font size="14"/>
+        </font>
+    </Label>
+    
+    <GridPane hgap="10" vgap="10" alignment="CENTER">
+        <Label text="Username:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <TextField fx:id="usernameField" promptText="Enter username" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        
+        <Label text="Password:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <PasswordField fx:id="passwordField" promptText="Enter password" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+    </GridPane>
+    
+    <Button fx:id="loginButton" text="Login" onAction="#handleLoginButton" 
+            style="-fx-background-color: #4285f4; -fx-text-fill: white;"
+            prefWidth="200"/>
+    
+    <Label fx:id="errorLabel" style="-fx-text-fill: red;"/>
+    
+    <Label text="Default credentials: admin/admin" style="-fx-font-size: 11; -fx-text-fill: #757575;"/>
+</VBox> 
