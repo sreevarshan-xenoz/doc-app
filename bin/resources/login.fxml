@@ -50,8 +50,6 @@
             </HBox>
             
             <Label fx:id="loginErrorLabel" style="-fx-text-fill: red;"/>
-            
-            <Label text="Default: admin/admin, patient1/patient1" style="-fx-font-size: 11; -fx-text-fill: #757575;"/>
         </VBox>
         
         <!-- Registration Form -->

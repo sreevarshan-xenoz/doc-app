@@ -283,8 +283,8 @@ public class DatabaseService {
             
             System.out.println("Attempting to authenticate user: " + username);
             
-            // Create URL with filter
-            String filter = String.format("username=eq.%s&password=eq.%s", username, password);
+            // First, get the user by username to retrieve the salt
+            String filter = String.format("username=eq.%s", username);
             URL url = new URL(SUPABASE_URL + "/rest/v1/" + USERS_TABLE + "?select=*&" + filter);
             
             System.out.println("Auth URL: " + url.toString());
@@ -317,7 +317,7 @@ public class DatabaseService {
                 if (jsonStr.startsWith("[") && jsonStr.endsWith("]")) {
                     // Empty array means no user found
                     if (jsonStr.equals("[]")) {
-                        System.out.println("No user found with the provided credentials");
+                        System.out.println("No user found with the provided username");
                         return null;
                     }
                     
@@ -330,25 +330,30 @@ public class DatabaseService {
                             String idStr = extractJsonValue(jsonStr, "id");
                             String role = extractJsonValue(jsonStr, "role");
                             String email = extractJsonValue(jsonStr, "email");
+                            String storedHash = extractJsonValue(jsonStr, "password_hash");
+                            String salt = extractJsonValue(jsonStr, "password_salt");
                             
                             System.out.println("Extracted ID: " + idStr);
                             System.out.println("Extracted role: " + role);
-                            System.out.println("Extracted email: " + email);
                             
-                            if (idStr == null) {
-                                System.err.println("Failed to extract user ID from response");
-                                // Use a default ID for testing
-                                return new User(99, username, password, role != null ? role : "patient", email != null ? email : "");
+                            if (idStr == null || storedHash == null || salt == null) {
+                                System.err.println("Failed to extract required user data from response");
+                                return null;
+                            }
+                            
+                            // Verify the password
+                            if (!PasswordUtils.verifyPassword(password, storedHash, salt)) {
+                                System.out.println("Password verification failed");
+                                return null;
                             }
                             
                             int id = Integer.parseInt(idStr);
                             System.out.println("User authenticated successfully - ID: " + id + ", Role: " + role);
-                            return new User(id, username, password, role, email);
+                            return new User(id, username, null, role, email); // Don't store the password in memory
                         } catch (NumberFormatException e) {
                             System.err.println("Error parsing user ID: " + e.getMessage());
                             System.err.println("JSON response: " + jsonStr);
-                            // Use a default ID for testing
-                            return new User(99, username, password, "patient", "");
+                            return null;
                         }
                     }
                 }
@@ -369,18 +374,7 @@ public class DatabaseService {
                 }
             }
             
-            // Default to local authentication as fallback
-            if (username.equals("admin") && password.equals("admin")) {
-                System.out.println("Using default admin authentication as fallback");
-                return new User(0, username, password, "admin", "admin@example.com");
-            }
-            
-            // For testing - add a default patient user
-            if (username.equals("patient1") && password.equals("patient1")) {
-                System.out.println("Using default patient authentication as fallback");
-                return new User(1, username, password, "patient", "patient1@example.com");
-            }
-            
+            // Authentication failed
             return null;
         } catch (Exception e) {
             System.err.println("Error authenticating user: " + e.getMessage());
@@ -391,12 +385,16 @@ public class DatabaseService {
 
     public boolean registerUser(User user) {
         try {
-            // Create JSON payload
-            String json = String.format(
-                "{\"username\":\"%s\",\"password\":\"%s\",\"role\":\"%s\",\"email\":\"%s\"}",
-                user.getUsername(), user.getPassword(), user.getRole(), user.getEmail());
+            // Generate a salt and hash the password
+            String salt = PasswordUtils.generateSalt();
+            String passwordHash = PasswordUtils.hashPassword(user.getPassword(), salt);
             
-            System.out.println("Registering new user: " + json);
+            // Create JSON payload with hashed password and salt
+            String json = String.format(
+                "{\"username\":\"%s\",\"password_hash\":\"%s\",\"password_salt\":\"%s\",\"role\":\"%s\",\"email\":\"%s\"}",
+                user.getUsername(), passwordHash, salt, user.getRole(), user.getEmail());
+            
+            System.out.println("Registering new user: " + user.getUsername() + " with role: " + user.getRole());
             
             // Create connection
             URL url = new URL(SUPABASE_URL + "/rest/v1/" + USERS_TABLE);

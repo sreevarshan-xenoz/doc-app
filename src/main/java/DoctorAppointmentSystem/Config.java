@@ -12,10 +12,6 @@ public class Config {
     public static String SUPABASE_URL = "https://your-supabase-project-url.supabase.co";
     public static String SUPABASE_API_KEY = "your-supabase-api-key";
     
-    // Default admin credentials (for demo purposes)
-    public static final String ADMIN_USERNAME = "admin";
-    public static final String ADMIN_PASSWORD = "admin";
-    
     // Current logged in user
     private static User currentUser;
     

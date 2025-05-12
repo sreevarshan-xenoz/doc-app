@@ -146,8 +146,30 @@ public class LoginController {
         String role = patientRoleRadio.isSelected() ? "patient" : "admin";
         
         // Validate input
-        if (username.isEmpty() || password.isEmpty() || email.isEmpty()) {
-            registerErrorLabel.setText("Please fill all fields");
+        if (username.isEmpty()) {
+            registerErrorLabel.setText("Please enter a username");
+            return;
+        }
+        
+        if (password.isEmpty()) {
+            registerErrorLabel.setText("Please enter a password");
+            return;
+        }
+        
+        if (password.length() < 6) {
+            registerErrorLabel.setText("Password must be at least 6 characters");
+            regPasswordField.clear();
+            regConfirmPasswordField.clear();
+            return;
+        }
+        
+        if (email.isEmpty()) {
+            registerErrorLabel.setText("Please enter an email address");
+            return;
+        }
+        
+        if (!email.contains("@") || !email.contains(".")) {
+            registerErrorLabel.setText("Please enter a valid email address");
             return;
         }
         
@@ -157,6 +179,8 @@ public class LoginController {
             regConfirmPasswordField.clear();
             return;
         }
+        
+        registerErrorLabel.setText("Creating account...");
         
         // Create new user
         User newUser = new User(0, username, password, role, email);
