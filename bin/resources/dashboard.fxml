@@ -58,20 +58,27 @@
     <!-- Appointments List -->
     <center>
         <VBox spacing="10" style="-fx-padding: 20;">
-            <Label text="Scheduled Appointments" style="-fx-font-weight: bold;">
-                <font>
-                    <Font size="16"/>
-                </font>
-            </Label>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Scheduled Appointments" style="-fx-font-weight: bold;">
+                    <font>
+                        <Font size="16"/>
+                    </font>
+                </Label>
+                <Region HBox.hgrow="ALWAYS" />
+                <Button text="Refresh" onAction="#handleRefreshButton" 
+                        style="-fx-background-color: #4caf50; -fx-text-fill: white;" />
+            </HBox>
             
             <ListView fx:id="appointmentsListView" VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);" />
+            
+            <Label text="Right-click on an appointment to delete it" style="-fx-font-size: 11; -fx-text-fill: #757575;" />
         </VBox>
     </center>
     
     <!-- Footer -->
     <bottom>
         <HBox alignment="CENTER" style="-fx-padding: 10; -fx-background-color: #eeeeee;">
-            <Label text="© 2023 Doctor Appointment System" style="-fx-text-fill: #757575;" />
+            <Label text="© 2023 Doctor Appointment System - Connected to Supabase" style="-fx-text-fill: #757575;" />
         </HBox>
     </bottom>
     
