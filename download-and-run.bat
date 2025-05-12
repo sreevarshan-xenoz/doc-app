@@ -27,27 +27,24 @@ powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.Secur
 echo Extracting JavaFX...
 powershell -Command "& {Expand-Archive -Force '%TEMP_DIR%\javafx.zip' -DestinationPath '%TEMP_DIR%'}"
 
-echo Downloading Supabase dependencies...
-powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://repo1.maven.org/maven2/io/github/supabase-community/supabase-java/0.0.2/supabase-java-0.0.2.jar' -OutFile '%LIBS_DIR%\supabase-java-0.0.2.jar'}"
-powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://repo1.maven.org/maven2/org/json/json/20230618/json-20230618.jar' -OutFile '%LIBS_DIR%\json-20230618.jar'}"
-
 set JAVAFX_PATH=%CD%\%TEMP_DIR%\javafx-sdk-21.0.2\lib
-set LIBS_PATH=%CD%\%LIBS_DIR%\*.jar
 
 echo JavaFX extracted to: %JAVAFX_PATH%
-echo Dependencies downloaded to: %LIBS_PATH%
 echo.
 
+echo Cleaning previous build...
+if exist bin rmdir /s /q bin
+
 echo Compiling Java files...
-if not exist bin mkdir bin
-javac -d bin -cp ".;%LIBS_PATH%" --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml src\main\java\DoctorAppointmentSystem\*.java
+mkdir bin
+javac -d bin --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml src\main\java\DoctorAppointmentSystem\*.java
 
 echo Copying resources...
-if not exist bin\resources mkdir bin\resources
+mkdir bin\resources
 copy src\main\resources\*.fxml bin\resources\
 
 echo Running application...
-java -cp "bin;bin\resources;%LIBS_PATH%" --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml DoctorAppointmentSystem.Main
+java -cp "bin;bin\resources" --module-path "%JAVAFX_PATH%" --add-modules javafx.controls,javafx.fxml DoctorAppointmentSystem.Main
 
 echo.
 echo Application closed. 

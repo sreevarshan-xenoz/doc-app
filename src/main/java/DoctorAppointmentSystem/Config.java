@@ -24,39 +24,52 @@ public class Config {
         try {
             // First check if .env file exists
             Path envPath = Paths.get(".env");
+            System.out.println("Looking for .env file at: " + envPath.toAbsolutePath());
+            
             if (Files.exists(envPath)) {
                 Properties envProps = new Properties();
-                FileInputStream input = new FileInputStream(".env");
-                envProps.load(input);
-                input.close();
-                
-                // Get Supabase credentials from .env file
-                if (envProps.containsKey("SUPABASE_URL")) {
-                    SUPABASE_URL = envProps.getProperty("SUPABASE_URL");
+                try (FileInputStream input = new FileInputStream(".env")) {
+                    envProps.load(input);
+                    
+                    // Get Supabase credentials from .env file
+                    if (envProps.containsKey("SUPABASE_URL")) {
+                        SUPABASE_URL = envProps.getProperty("SUPABASE_URL").trim();
+                    }
+                    
+                    if (envProps.containsKey("SUPABASE_API_KEY")) {
+                        SUPABASE_API_KEY = envProps.getProperty("SUPABASE_API_KEY").trim();
+                    }
+                    
+                    System.out.println("Loaded Supabase credentials from .env file");
+                    System.out.println("URL: " + SUPABASE_URL);
+                    System.out.println("API key length: " + SUPABASE_API_KEY.length());
                 }
-                
-                if (envProps.containsKey("SUPABASE_API_KEY")) {
-                    SUPABASE_API_KEY = envProps.getProperty("SUPABASE_API_KEY");
-                }
-                
-                System.out.println("Loaded Supabase credentials from .env file");
             } else {
                 // If .env file doesn't exist, try to load from environment variables
                 String envUrl = System.getenv("SUPABASE_URL");
                 String envKey = System.getenv("SUPABASE_API_KEY");
                 
                 if (envUrl != null && !envUrl.isEmpty()) {
-                    SUPABASE_URL = envUrl;
+                    SUPABASE_URL = envUrl.trim();
                 }
                 
                 if (envKey != null && !envKey.isEmpty()) {
-                    SUPABASE_API_KEY = envKey;
+                    SUPABASE_API_KEY = envKey.trim();
                 }
                 
                 System.out.println("Tried loading Supabase credentials from environment variables");
             }
+            
+            // Validate credentials
+            if (SUPABASE_URL.equals("https://your-supabase-project-url.supabase.co") ||
+                SUPABASE_API_KEY.equals("your-supabase-api-key")) {
+                System.err.println("Warning: Using default Supabase credentials. Please update your .env file.");
+            }
         } catch (IOException e) {
             System.err.println("Error loading .env file: " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("Unexpected error loading configuration: " + e.getMessage());
             e.printStackTrace();
         }
     }

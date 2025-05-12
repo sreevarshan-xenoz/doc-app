@@ -65,7 +65,7 @@
                     </font>
                 </Label>
                 <Region HBox.hgrow="ALWAYS" />
-                <Button text="Refresh" onAction="#handleRefreshButton" 
+                <Button fx:id="refreshButton" text="Refresh" onAction="#handleRefreshButton" 
                         style="-fx-background-color: #4caf50; -fx-text-fill: white;" />
             </HBox>
             

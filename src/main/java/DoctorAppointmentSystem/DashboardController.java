@@ -142,6 +142,8 @@ public class DashboardController implements Initializable {
             // Create new appointment
             Appointment newAppointment = new Appointment(patientName, formattedDate);
             
+            statusLabel.setText("Sending appointment to database...");
+            
             // Save appointment to Supabase
             boolean success = databaseService.insertAppointment(newAppointment);
             
@@ -156,7 +158,9 @@ public class DashboardController implements Initializable {
                 // Update status
                 statusLabel.setText("Appointment booked successfully!");
             } else {
-                statusLabel.setText("Failed to save appointment to database");
+                statusLabel.setText("Failed to save appointment to database. Check console for details.");
+                System.err.println("API Key length: " + Config.SUPABASE_API_KEY.length());
+                System.err.println("Database URL: " + Config.SUPABASE_URL);
             }
             
         } catch (Exception e) {
