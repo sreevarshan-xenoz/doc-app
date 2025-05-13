@@ -1,515 +1,418 @@
 package DoctorAppointmentSystem;
 
+import io.github.cdimascio.dotenv.Dotenv;
+import io.supabase.BuildConfig;
+import io.supabase.GoTrue;
+import io.supabase.GoTrueApi;
+import io.supabase.GoTrueClient;
+import io.supabase.SupabaseClient;
+import io.supabase.data.auth.AuthSignInWithPasswordCredentials;
+import io.supabase.data.auth.AuthSignUpWithPasswordCredentials;
+import io.supabase.data.auth.OAuth;
+import io.supabase.data.auth.TokenResponse;
+import io.supabase.data.auth.UserAttributes;
+import io.supabase.data.auth.UserIdentity;
+import io.supabase.data.auth.UserSession;
+import io.supabase.data.auth.User;
+import io.supabase.errors.SupabaseException;
+import io.supabase.exceptions.OAuthException;
+import io.supabase.exceptions.RestException;
+import io.supabase.functions.Function;
+import io.supabase.gotrue.GoTrueClientOptions;
+import io.supabase.postgrest.PostgrestDefaultClient;
+import io.supabase.postgrest.PostgrestFilterBuilder;
+import io.supabase.postgrest.http.HttpURLConnectionImpl;
+import io.supabase.postgrest.builder.PostgrestRawBuilder;
+import io.supabase.storage.Storage;
+import io.supabase.supabase.CreateClientOptions;
+import io.supabase.supabase.SupabaseDefault;
+import kotlinx.serialization.json.Json;
+import kotlinx.serialization.json.JsonElement;
+import kotlinx.serialization.json.JsonObject;
+import kotlinx.serialization.json.JsonPrimitive;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class DatabaseService {
+
     private static DatabaseService instance;
-    
-    private final String SUPABASE_URL;
-    private final String SUPABASE_API_KEY;
-    private final String APPOINTMENTS_TABLE = "appointments";
-    private final String USERS_TABLE = "users";
-    
-    private DatabaseService(String supabaseUrl, String supabaseApiKey) {
-        this.SUPABASE_URL = supabaseUrl;
-        this.SUPABASE_API_KEY = supabaseApiKey;
-        
-        // Debug credentials during initialization
-        System.out.println("DatabaseService initialized with:");
-        System.out.println("URL: " + supabaseUrl);
-        System.out.println("API key length: " + (supabaseApiKey != null ? supabaseApiKey.length() : 0));
+    private String supabaseUrl;
+    private String supabaseKey;
+    private io.supabase.SupabaseClient client;
+
+    // Private constructor for singleton pattern
+    private DatabaseService(String url, String key) {
+        this.supabaseUrl = url;
+        this.supabaseKey = key;
     }
-    
-    public static synchronized DatabaseService getInstance(String supabaseUrl, String supabaseApiKey) {
+
+    // Singleton getter
+    public static DatabaseService getInstance(String url, String key) {
         if (instance == null) {
-            instance = new DatabaseService(supabaseUrl, supabaseApiKey);
+            instance = new DatabaseService(url, key);
         }
         return instance;
     }
-    
-    public boolean insertAppointment(Appointment appointment, User user) {
+
+    // Method to authenticate a user
+    public DoctorAppointmentSystem.User authenticateUser(String username, String password) {
         try {
-            // Check if credentials are valid
-            if (SUPABASE_URL == null || SUPABASE_URL.isEmpty() || 
-                SUPABASE_API_KEY == null || SUPABASE_API_KEY.isEmpty()) {
-                System.err.println("Error: Supabase credentials are not properly configured");
-                return false;
-            }
-            
-            // Create JSON payload
-            String json;
-            
-            if (user != null) {
-                json = String.format(
-                    "{\"patient_name\":\"%s\",\"appointment_date\":\"%s\",\"user_id\":%d}",
-                    appointment.getPatientName(), appointment.getDate(), user.getId());
+            // Create HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            String apiUrl = supabaseUrl + "/auth/v1/token?grant_type=password";
+
+            // Create HTTP POST request
+            HttpPost httpPost = new HttpPost(apiUrl);
+            httpPost.setHeader("apikey", supabaseKey);
+            httpPost.setHeader("Content-Type", "application/json");
+
+            // Create request body with credentials
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("email", username);
+            requestBody.put("password", password);
+            StringEntity entity = new StringEntity(requestBody.toString());
+            httpPost.setEntity(entity);
+
+            // Execute request
+            CloseableHttpResponse response = httpClient.execute(httpPost);
+            int statusCode = response.getStatusLine().getStatusCode();
+
+            // Read response
+            String responseBody = EntityUtils.toString(response.getEntity());
+            httpClient.close();
+
+            // Check for successful login
+            if (statusCode == 200) {
+                JSONObject jsonResponse = new JSONObject(responseBody);
+                JSONObject user = jsonResponse.getJSONObject("user");
+
+                // Get user ID and other details
+                String userId = user.getString("id");
+                String email = user.getString("email");
+                String role = getUserRole(userId);
+
+                return new DoctorAppointmentSystem.User(userId, email, role);
             } else {
-                json = String.format(
-                    "{\"patient_name\":\"%s\",\"appointment_date\":\"%s\"}",
-                    appointment.getPatientName(), appointment.getDate());
+                System.err.println("Authentication failed. Status: " + statusCode);
+                System.err.println("Response: " + responseBody);
+                return null;
+            }
+        } catch (Exception e) {
+            System.err.println("Error during authentication: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Helper method to get user role
+    private String getUserRole(String userId) {
+        try {
+            // Create HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            String apiUrl = supabaseUrl + "/rest/v1/users?id=eq." + userId;
+
+            // Create HTTP GET request
+            HttpGet httpGet = new HttpGet(apiUrl);
+            httpGet.setHeader("apikey", supabaseKey);
+            httpGet.setHeader("Authorization", "Bearer " + supabaseKey);
+
+            // Execute request
+            CloseableHttpResponse response = httpClient.execute(httpGet);
+            String responseBody = EntityUtils.toString(response.getEntity());
+            httpClient.close();
+
+            // Parse response
+            JSONArray jsonArray = new JSONArray(responseBody);
+            if (jsonArray.length() > 0) {
+                JSONObject user = jsonArray.getJSONObject(0);
+                return user.optString("role", "patient"); // Default to patient if role not found
+            }
+            return "patient"; // Default role
+        } catch (Exception e) {
+            System.err.println("Error getting user role: " + e.getMessage());
+            return "patient"; // Default to patient on error
+        }
+    }
+
+    // Insert an appointment to the Supabase database
+    public boolean insertAppointment(Appointment appointment, DoctorAppointmentSystem.User currentUser) {
+        try {
+            // Generate a unique appointment ID
+            String appointmentId = UUID.randomUUID().toString().substring(0, 8);
+            appointment.setAppointmentId(appointmentId);
+            
+            // Set status to "Scheduled" if not already set
+            if (appointment.getStatus() == null || appointment.getStatus().isEmpty()) {
+                appointment.setStatus("Scheduled");
             }
             
-            System.out.println("Sending to Supabase: " + json);
-            System.out.println("URL: " + SUPABASE_URL + "/rest/v1/" + APPOINTMENTS_TABLE);
+            // Create HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            String apiUrl = supabaseUrl + "/rest/v1/appointments";
+
+            // Create HTTP POST request
+            HttpPost httpPost = new HttpPost(apiUrl);
+            httpPost.setHeader("apikey", supabaseKey);
+            httpPost.setHeader("Authorization", "Bearer " + supabaseKey);
+            httpPost.setHeader("Content-Type", "application/json");
+            httpPost.setHeader("Prefer", "return=minimal");
+
+            // Create request body with appointment details
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("id", appointmentId);
+            requestBody.put("patient_name", appointment.getPatientName());
+            requestBody.put("patient_id", appointment.getPatientId());
+            requestBody.put("age", appointment.getAge());
+            requestBody.put("gender", appointment.getGender());
+            requestBody.put("contact_number", appointment.getContactNumber());
+            requestBody.put("email", appointment.getEmail());
+            requestBody.put("date", appointment.getDate());
+            requestBody.put("time", appointment.getTime());
+            requestBody.put("doctor_name", appointment.getDoctorName());
+            requestBody.put("department", appointment.getDepartment());
+            requestBody.put("appointment_type", appointment.getAppointmentType());
+            requestBody.put("symptoms", appointment.getSymptoms());
+            requestBody.put("medical_history", appointment.getMedicalHistory());
+            requestBody.put("preferred_mode", appointment.getPreferredMode());
+            requestBody.put("consultation_room", appointment.getConsultationRoom());
+            requestBody.put("payment_status", appointment.getPaymentStatus());
+            requestBody.put("notes", appointment.getNotes());
+            requestBody.put("status", appointment.getStatus());
             
-            // Create connection
-            URL url = new URL(SUPABASE_URL + "/rest/v1/" + APPOINTMENTS_TABLE);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
-            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
-            conn.setRequestProperty("Prefer", "return=minimal");
-            conn.setDoOutput(true);
-            
-            // Send data
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = json.getBytes(StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
+            // Add user_id if available
+            if (currentUser != null) {
+                requestBody.put("user_id", currentUser.getUserId());
             }
+
+            StringEntity entity = new StringEntity(requestBody.toString());
+            httpPost.setEntity(entity);
+
+            // Execute request
+            CloseableHttpResponse response = httpClient.execute(httpPost);
+            int statusCode = response.getStatusLine().getStatusCode();
             
-            // Get response
-            int responseCode = conn.getResponseCode();
-            System.out.println("Response code: " + responseCode);
+            // Log the request and response
+            System.out.println("API URL: " + apiUrl);
+            System.out.println("Request Body: " + requestBody.toString());
+            System.out.println("Response Status: " + statusCode);
             
-            // Read error response if available
-            if (responseCode >= 400) {
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
-                    System.out.println("Error response: " + response.toString());
-                }
-            } else {
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
-                    System.out.println("Success response: " + response.toString());
-                }
-            }
+            // Debug response
+            String responseBody = EntityUtils.toString(response.getEntity());
+            System.out.println("Response Body: " + responseBody);
             
-            return responseCode >= 200 && responseCode < 300;
-            
+            httpClient.close();
+
+            // Check if request was successful
+            return statusCode == 201 || statusCode == 200;
         } catch (Exception e) {
             System.err.println("Error inserting appointment: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
-    
-    public boolean insertAppointment(Appointment appointment) {
-        return insertAppointment(appointment, null);
-    }
-    
+
+    // Get all appointments from Supabase
     public List<Appointment> getAllAppointments() {
         List<Appointment> appointments = new ArrayList<>();
-        
         try {
-            // Create connection
-            URL url = new URL(SUPABASE_URL + "/rest/v1/" + APPOINTMENTS_TABLE + "?select=*");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
-            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
-            
-            // Get response
-            int responseCode = conn.getResponseCode();
-            
-            if (responseCode == 200) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                String inputLine;
-                StringBuilder response = new StringBuilder();
+            // Create HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            String apiUrl = supabaseUrl + "/rest/v1/appointments?select=*";
+
+            // Create HTTP GET request
+            HttpGet httpGet = new HttpGet(apiUrl);
+            httpGet.setHeader("apikey", supabaseKey);
+            httpGet.setHeader("Authorization", "Bearer " + supabaseKey);
+
+            // Execute request
+            CloseableHttpResponse response = httpClient.execute(httpGet);
+            String responseBody = EntityUtils.toString(response.getEntity());
+            httpClient.close();
+
+            // Parse response
+            JSONArray jsonArray = new JSONArray(responseBody);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject appointment = jsonArray.getJSONObject(i);
                 
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
-                }
-                in.close();
+                String id = appointment.optString("id", "");
+                String patientName = appointment.optString("patient_name", "");
+                String patientId = appointment.optString("patient_id", "");
+                int age = appointment.optInt("age", 0);
+                String gender = appointment.optString("gender", "");
+                String contactNumber = appointment.optString("contact_number", "");
+                String email = appointment.optString("email", "");
+                String date = appointment.optString("date", "");
+                String time = appointment.optString("time", "");
+                String doctorName = appointment.optString("doctor_name", "");
+                String department = appointment.optString("department", "");
+                String appointmentType = appointment.optString("appointment_type", "");
+                String symptoms = appointment.optString("symptoms", "");
+                String medicalHistory = appointment.optString("medical_history", "");
+                String preferredMode = appointment.optString("preferred_mode", "");
+                String consultationRoom = appointment.optString("consultation_room", "");
+                String paymentStatus = appointment.optString("payment_status", "");
+                String notes = appointment.optString("notes", "");
+                String status = appointment.optString("status", "Scheduled");
                 
-                // Parse JSON response (simple parsing without external libraries)
-                String jsonStr = response.toString();
+                Appointment appt = new Appointment(
+                    patientName, patientId, age, gender, contactNumber, email,
+                    date, time, doctorName, department, appointmentType,
+                    symptoms, medicalHistory, preferredMode, consultationRoom,
+                    paymentStatus, notes
+                );
                 
-                // Very simple JSON array parser
-                jsonStr = jsonStr.trim();
-                if (jsonStr.startsWith("[") && jsonStr.endsWith("]")) {
-                    jsonStr = jsonStr.substring(1, jsonStr.length() - 1);
-                    
-                    // Split by objects
-                    if (!jsonStr.isEmpty()) {
-                        int depth = 0;
-                        int start = 0;
-                        
-                        for (int i = 0; i < jsonStr.length(); i++) {
-                            char c = jsonStr.charAt(i);
-                            
-                            if (c == '{') {
-                                if (depth == 0) {
-                                    start = i;
-                                }
-                                depth++;
-                            } else if (c == '}') {
-                                depth--;
-                                if (depth == 0) {
-                                    String obj = jsonStr.substring(start, i + 1);
-                                    parseAppointment(obj, appointments);
-                                }
-                            }
-                        }
-                    }
-                }
+                appt.setAppointmentId(id);
+                appt.setStatus(status);
+                appointments.add(appt);
             }
-            
         } catch (Exception e) {
-            System.err.println("Error fetching appointments: " + e.getMessage());
+            System.err.println("Error getting appointments: " + e.getMessage());
             e.printStackTrace();
         }
-        
         return appointments;
     }
-    
-    private void parseAppointment(String jsonObj, List<Appointment> appointments) {
-        try {
-            // Simple extraction of values
-            String patientName = extractJsonValue(jsonObj, "patient_name");
-            String appointmentDate = extractJsonValue(jsonObj, "appointment_date");
-            
-            if (patientName != null && appointmentDate != null) {
-                Appointment appointment = new Appointment(patientName, appointmentDate);
-                appointments.add(appointment);
-            }
-        } catch (Exception e) {
-            System.err.println("Error parsing appointment: " + e.getMessage());
-        }
-    }
-    
-    private String extractJsonValue(String json, String key) {
-        String searchKey = "\"" + key + "\":";
-        int index = json.indexOf(searchKey);
-        
-        if (index != -1) {
-            index += searchKey.length();
-            
-            // Skip whitespace
-            while (index < json.length() && Character.isWhitespace(json.charAt(index))) {
-                index++;
-            }
-            
-            if (index < json.length()) {
-                if (json.charAt(index) == '"') {
-                    // String value
-                    int endIndex = json.indexOf('"', index + 1);
-                    if (endIndex != -1) {
-                        return json.substring(index + 1, endIndex);
-                    }
-                } else if (Character.isDigit(json.charAt(index)) || json.charAt(index) == '-') {
-                    // Numeric value
-                    int endIndex = index;
-                    while (endIndex < json.length() && 
-                          (Character.isDigit(json.charAt(endIndex)) || 
-                           json.charAt(endIndex) == '.' || 
-                           json.charAt(endIndex) == '-' ||
-                           json.charAt(endIndex) == 'e' ||
-                           json.charAt(endIndex) == 'E')) {
-                        endIndex++;
-                    }
-                    
-                    if (endIndex > index) {
-                        // Check if we have a comma or closing brace after
-                        if (endIndex == json.length() || 
-                            json.charAt(endIndex) == ',' || 
-                            json.charAt(endIndex) == '}') {
-                            return json.substring(index, endIndex);
-                        }
-                    }
-                } else if (json.charAt(index) == 'n' && 
-                          index + 4 <= json.length() && 
-                          json.substring(index, index + 4).equals("null")) {
-                    // Null value
-                    return null;
-                }
-            }
-        }
-        
-        return null;
-    }
-    
+
+    // Delete an appointment
     public boolean deleteAppointment(String patientName, String date) {
         try {
-            // Create connection - using URL parameters for filtering
-            String filter = String.format("patient_name=eq.%s&appointment_date=eq.%s", 
-                                        patientName, date);
-            URL url = new URL(SUPABASE_URL + "/rest/v1/" + APPOINTMENTS_TABLE + "?" + filter);
-            
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("DELETE");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
-            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
-            
-            // Get response
-            int responseCode = conn.getResponseCode();
-            return responseCode == 200 || responseCode == 204;
-            
+            // Create HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            String apiUrl = supabaseUrl + "/rest/v1/appointments?patient_name=eq." + 
+                            patientName.replace(" ", "%20") + "&date=eq." + date;
+
+            // Create HTTP DELETE request
+            HttpDelete httpDelete = new HttpDelete(apiUrl);
+            httpDelete.setHeader("apikey", supabaseKey);
+            httpDelete.setHeader("Authorization", "Bearer " + supabaseKey);
+
+            // Execute request
+            CloseableHttpResponse response = httpClient.execute(httpDelete);
+            int statusCode = response.getStatusLine().getStatusCode();
+            httpClient.close();
+
+            // Check if request was successful
+            return statusCode == 204 || statusCode == 200;
         } catch (Exception e) {
             System.err.println("Error deleting appointment: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
-
-    public User authenticateUser(String username, String password) {
+    
+    // Update an appointment status
+    public boolean updateAppointmentStatus(Appointment appointment, String newStatus) {
         try {
-            // Check if credentials are valid
-            if (SUPABASE_URL == null || SUPABASE_URL.isEmpty() || 
-                SUPABASE_API_KEY == null || SUPABASE_API_KEY.isEmpty()) {
-                System.err.println("Error: Supabase credentials are not properly configured");
-                return null;
-            }
-            
-            System.out.println("Attempting to authenticate user: " + username);
-            
-            // First, get the user by username to retrieve the salt
-            String filter = String.format("username=eq.%s", username);
-            URL url = new URL(SUPABASE_URL + "/rest/v1/" + USERS_TABLE + "?select=*&" + filter);
-            
-            System.out.println("Auth URL: " + url.toString());
-            
-            // Create connection
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
-            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
-            
-            // Get response
-            int responseCode = conn.getResponseCode();
-            System.out.println("Auth response code: " + responseCode);
-            
-            if (responseCode == 200) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                String inputLine;
-                StringBuilder response = new StringBuilder();
-                
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
-                }
-                in.close();
-                
-                String jsonStr = response.toString();
-                System.out.println("Auth response: " + jsonStr);
-                
-                // Parse JSON array response
-                if (jsonStr.startsWith("[") && jsonStr.endsWith("]")) {
-                    // Empty array means no user found
-                    if (jsonStr.equals("[]")) {
-                        System.out.println("No user found with the provided username");
-                        return null;
-                    }
-                    
-                    jsonStr = jsonStr.substring(1, jsonStr.length() - 1);
-                    
-                    // If we have a user object
-                    if (!jsonStr.isEmpty()) {
-                        try {
-                            // Extract user data
-                            String idStr = extractJsonValue(jsonStr, "id");
-                            String role = extractJsonValue(jsonStr, "role");
-                            String email = extractJsonValue(jsonStr, "email");
-                            String storedHash = extractJsonValue(jsonStr, "password_hash");
-                            String salt = extractJsonValue(jsonStr, "password_salt");
-                            String verifiedStr = extractJsonValue(jsonStr, "verified");
-                            boolean verified = "true".equalsIgnoreCase(verifiedStr);
-                            
-                            System.out.println("Extracted ID: " + idStr);
-                            System.out.println("Extracted role: " + role);
-                            System.out.println("Verified: " + verified);
-                            
-                            if (idStr == null || storedHash == null || salt == null) {
-                                System.err.println("Failed to extract required user data from response");
-                                return null;
-                            }
-                            
-                            // Verify the password
-                            if (!PasswordUtils.verifyPassword(password, storedHash, salt)) {
-                                System.out.println("Password verification failed");
-                                return null;
-                            }
-                            
-                            // Check if user is verified
-                            if (!verified) {
-                                System.out.println("User is not verified");
-                                // We'll return the user but with a flag indicating they're not verified
-                            }
-                            
-                            int id = Integer.parseInt(idStr);
-                            System.out.println("User authenticated successfully - ID: " + id + ", Role: " + role);
-                            return new User(id, username, null, role, email, verified); // Include verification status
-                        } catch (NumberFormatException e) {
-                            System.err.println("Error parsing user ID: " + e.getMessage());
-                            System.err.println("JSON response: " + jsonStr);
-                            return null;
-                        }
-                    }
-                }
-                
-                // If we get here, the response format was unexpected
-                System.err.println("Unexpected response format: " + jsonStr);
-            } else {
-                System.out.println("Authentication failed with response code: " + responseCode);
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
-                    System.out.println("Error response: " + response.toString());
-                } catch (Exception e) {
-                    System.err.println("Failed to read error stream: " + e.getMessage());
-                }
-            }
-            
-            // Authentication failed
-            return null;
-        } catch (Exception e) {
-            System.err.println("Error authenticating user: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        }
-    }
+            // Create HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            String apiUrl = supabaseUrl + "/rest/v1/appointments?id=eq." + appointment.getAppointmentId();
 
-    public boolean registerUser(User user) {
-        try {
-            // Generate a salt and hash the password
-            String salt = PasswordUtils.generateSalt();
-            String passwordHash = PasswordUtils.hashPassword(user.getPassword(), salt);
-            
-            // Create JSON payload with hashed password and salt
-            String json = String.format(
-                "{\"username\":\"%s\",\"password_hash\":\"%s\",\"password_salt\":\"%s\",\"role\":\"%s\",\"email\":\"%s\",\"verified\":%b}",
-                user.getUsername(), passwordHash, salt, user.getRole(), user.getEmail(), user.isVerified());
-            
-            System.out.println("Registering new user: " + user.getUsername() + " with role: " + user.getRole());
-            
-            // Create connection
-            URL url = new URL(SUPABASE_URL + "/rest/v1/" + USERS_TABLE);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
-            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
-            conn.setRequestProperty("Prefer", "return=minimal");
-            conn.setDoOutput(true);
-            
-            // Send data
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = json.getBytes(StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
-            }
-            
-            // Get response
-            int responseCode = conn.getResponseCode();
-            System.out.println("Register response code: " + responseCode);
-            
-            if (responseCode >= 400) {
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
-                    System.out.println("Error response: " + response.toString());
-                }
-            }
-            
-            return responseCode >= 200 && responseCode < 300;
+            // Create HTTP POST request (using PATCH method)
+            HttpPost httpPost = new HttpPost(apiUrl);
+            httpPost.setHeader("apikey", supabaseKey);
+            httpPost.setHeader("Authorization", "Bearer " + supabaseKey);
+            httpPost.setHeader("Content-Type", "application/json");
+            httpPost.setHeader("Prefer", "return=minimal");
+            httpPost.setHeader("X-HTTP-Method-Override", "PATCH"); // Emulate PATCH
+
+            // Create request body with status update
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("status", newStatus);
+            StringEntity entity = new StringEntity(requestBody.toString());
+            httpPost.setEntity(entity);
+
+            // Execute request
+            CloseableHttpResponse response = httpClient.execute(httpPost);
+            int statusCode = response.getStatusLine().getStatusCode();
+            httpClient.close();
+
+            // Check if request was successful
+            return statusCode == 204 || statusCode == 200;
         } catch (Exception e) {
-            System.err.println("Error registering user: " + e.getMessage());
+            System.err.println("Error updating appointment status: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
-
-    // Get patient-specific appointments
-    public List<Appointment> getPatientAppointments(int userId) {
-        List<Appointment> appointments = new ArrayList<>();
-        
+    
+    // Update an appointment with all fields
+    public boolean updateAppointment(Appointment appointment) {
         try {
-            // Create connection with filter for user_id
-            String filter = String.format("user_id=eq.%d", userId);
-            URL url = new URL(SUPABASE_URL + "/rest/v1/" + APPOINTMENTS_TABLE + "?select=*&" + filter);
+            // Create HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            String apiUrl = supabaseUrl + "/rest/v1/appointments?id=eq." + appointment.getAppointmentId();
+
+            // Create HTTP POST request (using PATCH method)
+            HttpPost httpPost = new HttpPost(apiUrl);
+            httpPost.setHeader("apikey", supabaseKey);
+            httpPost.setHeader("Authorization", "Bearer " + supabaseKey);
+            httpPost.setHeader("Content-Type", "application/json");
+            httpPost.setHeader("Prefer", "return=minimal");
+            httpPost.setHeader("X-HTTP-Method-Override", "PATCH"); // Emulate PATCH
+
+            // Create request body with all appointment details
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("patient_name", appointment.getPatientName());
+            requestBody.put("patient_id", appointment.getPatientId());
+            requestBody.put("age", appointment.getAge());
+            requestBody.put("gender", appointment.getGender());
+            requestBody.put("contact_number", appointment.getContactNumber());
+            requestBody.put("email", appointment.getEmail());
+            requestBody.put("date", appointment.getDate());
+            requestBody.put("time", appointment.getTime());
+            requestBody.put("doctor_name", appointment.getDoctorName());
+            requestBody.put("department", appointment.getDepartment());
+            requestBody.put("appointment_type", appointment.getAppointmentType());
+            requestBody.put("symptoms", appointment.getSymptoms());
+            requestBody.put("medical_history", appointment.getMedicalHistory());
+            requestBody.put("preferred_mode", appointment.getPreferredMode());
+            requestBody.put("consultation_room", appointment.getConsultationRoom());
+            requestBody.put("payment_status", appointment.getPaymentStatus());
+            requestBody.put("notes", appointment.getNotes());
+            requestBody.put("status", appointment.getStatus());
             
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("apikey", SUPABASE_API_KEY);
-            conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_API_KEY);
-            
-            // Get response
-            int responseCode = conn.getResponseCode();
-            
-            if (responseCode == 200) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                String inputLine;
-                StringBuilder response = new StringBuilder();
-                
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
-                }
-                in.close();
-                
-                String jsonStr = response.toString();
-                
-                // Parse JSON response
-                if (jsonStr.startsWith("[") && jsonStr.endsWith("]")) {
-                    if (!jsonStr.equals("[]")) {
-                        jsonStr = jsonStr.substring(1, jsonStr.length() - 1);
-                        
-                        // Split by objects
-                        int depth = 0;
-                        int start = 0;
-                        
-                        for (int i = 0; i < jsonStr.length(); i++) {
-                            char c = jsonStr.charAt(i);
-                            
-                            if (c == '{') {
-                                if (depth == 0) {
-                                    start = i;
-                                }
-                                depth++;
-                            } else if (c == '}') {
-                                depth--;
-                                if (depth == 0) {
-                                    String obj = jsonStr.substring(start, i + 1);
-                                    parseAppointment(obj, appointments);
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                System.err.println("Error fetching patient appointments: " + responseCode);
-            }
-            
+            StringEntity entity = new StringEntity(requestBody.toString());
+            httpPost.setEntity(entity);
+
+            // Execute request
+            CloseableHttpResponse response = httpClient.execute(httpPost);
+            int statusCode = response.getStatusLine().getStatusCode();
+            httpClient.close();
+
+            // Check if request was successful
+            return statusCode == 204 || statusCode == 200;
         } catch (Exception e) {
-            System.err.println("Error fetching patient appointments: " + e.getMessage());
+            System.err.println("Error updating appointment: " + e.getMessage());
             e.printStackTrace();
+            return false;
         }
-        
-        return appointments;
     }
 } 

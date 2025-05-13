@@ -17,30 +17,16 @@ REM Copy resources
 echo Copying FXML resources...
 copy src\main\resources\*.fxml bin\resources\
 
-REM Enable delayed expansion for variables inside loops
-setlocal enabledelayedexpansion
-
-REM Build JARs classpath
-set JARS_CLASSPATH=
-for %%f in (libs\*.jar) do set JARS_CLASSPATH=!JARS_CLASSPATH!;%%f
-
-echo Using additional JAR files from libs directory
-
 REM Compile the Java files with proper classpath
 echo Compiling Java classes...
-javac -d bin -source 8 -target 8 -cp "libs\*" --module-path %JAVAFX_PATH% --add-modules javafx.controls,javafx.fxml --add-reads javafx.base=ALL-UNNAMED --add-reads javafx.graphics=ALL-UNNAMED src\main\java\DoctorAppointmentSystem\*.java
+javac -d bin --module-path %JAVAFX_PATH% --add-modules javafx.controls,javafx.fxml src\main\java\DoctorAppointmentSystem\*.java
 
 REM Run the application with proper classpath
 echo Running application...
 java --module-path %JAVAFX_PATH% --add-modules javafx.controls,javafx.fxml ^
      --add-opens javafx.graphics/javafx.scene=ALL-UNNAMED ^
      --add-opens javafx.controls/javafx.scene.control=ALL-UNNAMED ^
-     --add-opens javafx.base/com.sun.javafx.event=ALL-UNNAMED ^
-     --add-reads javafx.base=ALL-UNNAMED ^
-     --add-reads javafx.graphics=ALL-UNNAMED ^
-     -cp "bin;bin\resources;libs\*" DoctorAppointmentSystem.Main
-
-endlocal
+     -cp "bin;bin\resources" DoctorAppointmentSystem.Main
 
 echo.
 echo Application closed. 

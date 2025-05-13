@@ -1,46 +1,43 @@
 package DoctorAppointmentSystem;
 
 public class User {
-    private int id;
+    private String userId;  // Changed from int to String to hold UUID
     private String username;
     private String password;
     private String role;
     private String email;
-    private boolean verified;
     
-    // Constructor
-    public User(int id, String username, String password, String role, String email) {
-        this.id = id;
+    // Constructor for a full user with ID (for logged-in users)
+    public User(String userId, String username, String password, String role, String email) {
+        this.userId = userId;
         this.username = username;
         this.password = password;
         this.role = role;
         this.email = email;
-        this.verified = false; // Default to not verified
     }
     
-    // Constructor with verification status
-    public User(int id, String username, String password, String role, String email, boolean verified) {
-        this.id = id;
+    // Constructor for a user with just username/role (for session tracking)
+    public User(String userId, String username, String role) {
+        this.userId = userId;
+        this.username = username;
+        this.role = role;
+    }
+    
+    // Simplified constructor for new user registration
+    public User(String username, String password, String role, String email) {
         this.username = username;
         this.password = password;
         this.role = role;
         this.email = email;
-        this.verified = verified;
-    }
-    
-    // Simplified constructor for login
-    public User(String username, String password) {
-        this.username = username;
-        this.password = password;
     }
     
     // Getters and setters
-    public int getId() {
-        return id;
+    public String getUserId() {
+        return userId;
     }
     
-    public void setId(int id) {
-        this.id = id;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
     
     public String getUsername() {
@@ -75,19 +72,21 @@ public class User {
         this.email = email;
     }
     
-    public boolean isVerified() {
-        return verified;
-    }
-    
-    public void setVerified(boolean verified) {
-        this.verified = verified;
-    }
-    
+    // Helper methods
     public boolean isAdmin() {
-        return "admin".equals(role);
+        return "admin".equalsIgnoreCase(role);
     }
     
     public boolean isPatient() {
-        return "patient".equals(role);
+        return "patient".equalsIgnoreCase(role);
+    }
+    
+    public boolean isDoctor() {
+        return "doctor".equalsIgnoreCase(role);
+    }
+    
+    @Override
+    public String toString() {
+        return username + " (" + role + ")";
     }
 } 

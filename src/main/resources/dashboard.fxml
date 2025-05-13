@@ -4,6 +4,8 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.text.Font?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
@@ -12,94 +14,235 @@
     
     <!-- Header -->
     <top>
-        <VBox alignment="CENTER" style="-fx-background-color: #4285f4; -fx-padding: 15;">
-            <HBox alignment="CENTER">
-                <HBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
-                    <Label text="Doctor Appointment Management System" style="-fx-text-fill: white; -fx-font-weight: bold;">
-                        <font>
-                            <Font size="20"/>
-                        </font>
-                    </Label>
-                </HBox>
-                <Button fx:id="logoutButton" text="Logout" onAction="#handleLogoutButton"
-                        style="-fx-background-color: #ea4335; -fx-text-fill: white;" />
-            </HBox>
-            <HBox alignment="CENTER">
-                <Label text="Dashboard" style="-fx-text-fill: white;">
-                    <font>
-                        <Font size="14"/>
-                    </font>
-                </Label>
-                <Region HBox.hgrow="ALWAYS" />
-                <Label fx:id="welcomeLabel" text="Welcome, User" style="-fx-text-fill: white;" />
-            </HBox>
-        </VBox>
+        <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-background-color: #2196F3; -fx-padding: 10px;">
+            <Label text="Doctor Appointment System" style="-fx-font-size: 18; -fx-text-fill: white;"/>
+            <Region HBox.hgrow="ALWAYS" />
+            <Label fx:id="welcomeLabel" text="Welcome, User" style="-fx-text-fill: white;" />
+            <Button fx:id="logoutButton" text="Logout" onAction="#handleLogoutButton" style="-fx-background-color: #FFC107;"/>
+        </HBox>
     </top>
     
     <!-- Appointment Booking Form -->
-    <left>
-        <VBox spacing="15" style="-fx-padding: 20; -fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);">
-            <Label text="Book New Appointment" style="-fx-font-weight: bold;">
-                <font>
-                    <Font size="16"/>
-                </font>
-            </Label>
-            
-            <GridPane hgap="10" vgap="15">
-                <columnConstraints>
-                    <ColumnConstraints minWidth="100" />
-                    <ColumnConstraints minWidth="200" />
-                </columnConstraints>
-                
-                <Label text="Patient Name:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                <TextField fx:id="patientNameField" promptText="Enter full name" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                
-                <Label text="Appointment Date:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                <DatePicker fx:id="appointmentDatePicker" promptText="Select date" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-            </GridPane>
-            
-            <Button fx:id="bookAppointmentButton" text="Book Appointment" onAction="#handleBookAppointmentButton"
-                    style="-fx-background-color: #4285f4; -fx-text-fill: white;" maxWidth="Infinity" />
-            
-            <Label fx:id="statusLabel" style="-fx-text-fill: #4caf50;" wrapText="true" />
-            
-            <!-- Admin Controls Section -->
-            <VBox fx:id="adminControls" spacing="10" style="-fx-padding-top: 20; -fx-border-color: #ddd; -fx-border-width: 1 0 0 0; -fx-padding: 10 0 0 0;">
-                <Label text="Admin Controls" style="-fx-font-weight: bold;">
-                    <font>
-                        <Font size="14"/>
-                    </font>
-                </Label>
-                <Label text="As an admin, you can manage all appointments and patient accounts" 
-                       style="-fx-font-size: 12; -fx-text-fill: #757575;" wrapText="true" />
-            </VBox>
-        </VBox>
-    </left>
-    
-    <!-- Appointments List -->
     <center>
-        <VBox spacing="10" style="-fx-padding: 20;">
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Scheduled Appointments" style="-fx-font-weight: bold;">
-                    <font>
-                        <Font size="16"/>
-                    </font>
-                </Label>
-                <Region HBox.hgrow="ALWAYS" />
-                <Button fx:id="refreshButton" text="Refresh" onAction="#handleRefreshButton" 
-                        style="-fx-background-color: #4caf50; -fx-text-fill: white;" />
-            </HBox>
+        <SplitPane dividerPositions="0.45" orientation="HORIZONTAL">
+            <VBox spacing="10" style="-fx-padding: 10px;">
+                <Label text="Book Appointment" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+                
+                <TitledPane text="Patient Information" expanded="true">
+                    <content>
+                        <GridPane hgap="10" vgap="10">
+                            <padding>
+                                <Insets top="10" right="10" bottom="10" left="10"/>
+                            </padding>
+                            
+                            <Label text="Name:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                            <TextField fx:id="patientNameField" promptText="Enter patient name" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                            
+                            <Label text="Patient ID:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                            <TextField fx:id="patientIdField" promptText="Enter patient ID" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                            
+                            <Label text="Age:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                            <TextField fx:id="ageField" promptText="Enter age" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                            
+                            <Label text="Gender:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                            <ComboBox fx:id="genderComboBox" promptText="Select gender" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="Male" />
+                                        <String fx:value="Female" />
+                                        <String fx:value="Non-binary" />
+                                        <String fx:value="Prefer not to say" />
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+                            
+                            <Label text="Contact Number:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                            <TextField fx:id="contactNumberField" promptText="Enter contact number" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                            
+                            <Label text="Email:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                            <TextField fx:id="emailField" promptText="Enter email address" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                            
+                <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="100" prefWidth="120" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="200" prefWidth="250" />
+                </columnConstraints>
+                        </GridPane>
+                    </content>
+                </TitledPane>
+                
+                <TitledPane text="Appointment Details" expanded="true">
+                    <content>
+                        <GridPane hgap="10" vgap="10">
+                            <padding>
+                                <Insets top="10" right="10" bottom="10" left="10"/>
+                            </padding>
+                            
+                            <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                            <DatePicker fx:id="appointmentDatePicker" promptText="Select date" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                            
+                            <Label text="Time:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                            <ComboBox fx:id="timeComboBox" promptText="Select time" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="9:00 AM" />
+                                        <String fx:value="9:30 AM" />
+                                        <String fx:value="10:00 AM" />
+                                        <String fx:value="10:30 AM" />
+                                        <String fx:value="11:00 AM" />
+                                        <String fx:value="11:30 AM" />
+                                        <String fx:value="1:00 PM" />
+                                        <String fx:value="1:30 PM" />
+                                        <String fx:value="2:00 PM" />
+                                        <String fx:value="2:30 PM" />
+                                        <String fx:value="3:00 PM" />
+                                        <String fx:value="3:30 PM" />
+                                        <String fx:value="4:00 PM" />
+                                        <String fx:value="4:30 PM" />
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+                            
+                            <Label text="Doctor:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                            <ComboBox fx:id="doctorComboBox" promptText="Select doctor" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="Dr. Smith" />
+                                        <String fx:value="Dr. Johnson" />
+                                        <String fx:value="Dr. Williams" />
+                                        <String fx:value="Dr. Brown" />
+                                        <String fx:value="Dr. Davis" />
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+                            
+                            <Label text="Department:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                            <ComboBox fx:id="departmentComboBox" promptText="Select department" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="General" />
+                                        <String fx:value="Cardiology" />
+                                        <String fx:value="Neurology" />
+                                        <String fx:value="Pediatrics" />
+                                        <String fx:value="Orthopedics" />
+                                        <String fx:value="Dermatology" />
+                                        <String fx:value="Gynecology" />
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+                            
+                            <Label text="Type:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                            <ComboBox fx:id="appointmentTypeComboBox" promptText="Select type" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="Consultation" />
+                                        <String fx:value="Follow-up" />
+                                        <String fx:value="Procedure" />
+                                        <String fx:value="Surgery" />
+                                        <String fx:value="Lab Work" />
+                                        <String fx:value="Imaging" />
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+                            
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="100" prefWidth="120" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="200" prefWidth="250" />
+                            </columnConstraints>
+                        </GridPane>
+                    </content>
+                </TitledPane>
+                
+                <TitledPane text="Additional Details" expanded="true">
+                    <content>
+                        <GridPane hgap="10" vgap="10">
+                            <padding>
+                                <Insets top="10" right="10" bottom="10" left="10"/>
+                            </padding>
+                            
+                            <Label text="Symptoms:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                            <TextArea fx:id="symptomsField" promptText="Describe symptoms" prefHeight="60" GridPane.columnIndex="1" GridPane.rowIndex="0" wrapText="true" />
+                            
+                            <Label text="Medical History:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                            <TextArea fx:id="medicalHistoryField" promptText="Brief medical history" prefHeight="60" GridPane.columnIndex="1" GridPane.rowIndex="1" wrapText="true" />
+                            
+                            <Label text="Mode:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                            <ComboBox fx:id="modeComboBox" promptText="Select mode" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="In-person" />
+                                        <String fx:value="Telemedicine" />
+                                        <String fx:value="Home Visit" />
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+                            
+                            <Label text="Room/Link:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                            <TextField fx:id="roomField" promptText="Room number or video link" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                            
+                            <Label text="Payment Status:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                            <ComboBox fx:id="paymentStatusComboBox" promptText="Select payment status" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="Unpaid" />
+                                        <String fx:value="Paid" />
+                                        <String fx:value="Insurance" />
+                                        <String fx:value="Waived" />
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+                            
+                            <Label text="Notes:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                            <TextArea fx:id="notesField" promptText="Additional notes" prefHeight="60" GridPane.columnIndex="1" GridPane.rowIndex="5" wrapText="true" />
+                            
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="100" prefWidth="120" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="200" prefWidth="250" />
+                            </columnConstraints>
+            </GridPane>
+                    </content>
+                </TitledPane>
+                
+                <HBox alignment="CENTER" spacing="10">
+                    <Button fx:id="bookAppointmentButton" text="Book Appointment" onAction="#handleBookAppointmentButton" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+                    <Button text="Clear" onAction="#clearForm" style="-fx-background-color: #F44336; -fx-text-fill: white;"/>
+                </HBox>
+                
+                <Label fx:id="statusLabel" text="Ready" style="-fx-font-style: italic;"/>
+            </VBox>
             
-            <ListView fx:id="appointmentsListView" VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);" />
-            
-            <Label text="Right-click on an appointment to delete it" style="-fx-font-size: 11; -fx-text-fill: #757575;" />
+            <VBox spacing="10" style="-fx-padding: 10px;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Appointments" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button text="Refresh" onAction="#handleRefreshButton" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
+                    <VBox fx:id="adminControls">
+                        <Button fx:id="manageUsersButton" text="Manage Users" onAction="#handleManageUsersButton" style="-fx-background-color: #9C27B0; -fx-text-fill: white;"/>
         </VBox>
+                </HBox>
+                
+                <TableView fx:id="appointmentsTableView" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="idColumn" text="ID" prefWidth="60" />
+                        <TableColumn fx:id="patientNameColumn" text="Patient" prefWidth="100" />
+                        <TableColumn fx:id="dateColumn" text="Date" prefWidth="100" />
+                        <TableColumn fx:id="timeColumn" text="Time" prefWidth="70" />
+                        <TableColumn fx:id="doctorColumn" text="Doctor" prefWidth="100" />
+                        <TableColumn fx:id="departmentColumn" text="Department" prefWidth="100" />
+                        <TableColumn fx:id="typeColumn" text="Type" prefWidth="100" />
+                        <TableColumn fx:id="statusColumn" text="Status" prefWidth="80" />
+                    </columns>
+                    <placeholder>
+                        <Label text="No appointments available" />
+                    </placeholder>
+                </TableView>
+        </VBox>
+        </SplitPane>
     </center>
     
     <!-- Footer -->
     <bottom>
-        <HBox alignment="CENTER" style="-fx-padding: 10; -fx-background-color: #eeeeee;">
-            <Label text="© 2023 Doctor Appointment System - Connected to Supabase" style="-fx-text-fill: #757575;" />
+        <HBox alignment="CENTER_RIGHT" style="-fx-padding: 5px; -fx-background-color: #E0E0E0;">
+            <Label text="© 2023 Doctor Appointment System" />
         </HBox>
     </bottom>
     
