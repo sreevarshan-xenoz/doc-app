@@ -1,43 +1,34 @@
 package DoctorAppointmentSystem;
 
 public class User {
-    private String userId;  // Changed from int to String to hold UUID
+    private int id;
     private String username;
     private String password;
     private String role;
     private String email;
     
-    // Constructor for a full user with ID (for logged-in users)
-    public User(String userId, String username, String password, String role, String email) {
-        this.userId = userId;
+    // Constructor
+    public User(int id, String username, String password, String role, String email) {
+        this.id = id;
         this.username = username;
         this.password = password;
         this.role = role;
         this.email = email;
     }
     
-    // Constructor for a user with just username/role (for session tracking)
-    public User(String userId, String username, String role) {
-        this.userId = userId;
-        this.username = username;
-        this.role = role;
-    }
-    
-    // Simplified constructor for new user registration
-    public User(String username, String password, String role, String email) {
+    // Simplified constructor for login
+    public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.role = role;
-        this.email = email;
     }
     
     // Getters and setters
-    public String getUserId() {
-        return userId;
+    public int getId() {
+        return id;
     }
     
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setId(int id) {
+        this.id = id;
     }
     
     public String getUsername() {
@@ -72,21 +63,11 @@ public class User {
         this.email = email;
     }
     
-    // Helper methods
     public boolean isAdmin() {
-        return "admin".equalsIgnoreCase(role);
+        return "admin".equals(role);
     }
     
     public boolean isPatient() {
-        return "patient".equalsIgnoreCase(role);
-    }
-    
-    public boolean isDoctor() {
-        return "doctor".equalsIgnoreCase(role);
-    }
-    
-    @Override
-    public String toString() {
-        return username + " (" + role + ")";
+        return "patient".equals(role);
     }
 } 
