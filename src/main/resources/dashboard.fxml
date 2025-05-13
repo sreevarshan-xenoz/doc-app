@@ -8,6 +8,7 @@
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="DoctorAppointmentSystem.DashboardController"
+            fx:id="rootPane"
             style="-fx-background-color: #f5f5f5;">
     
     <!-- Header -->
@@ -76,11 +77,11 @@
         </VBox>
     </left>
     
-    <!-- Appointments List -->
+    <!-- Appointments - Using TabPane for List and Calendar Views -->
     <center>
         <VBox spacing="10" style="-fx-padding: 20;">
             <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Scheduled Appointments" style="-fx-font-weight: bold;">
+                <Label text="Appointments" style="-fx-font-weight: bold;">
                     <font>
                         <Font size="16"/>
                     </font>
@@ -90,9 +91,25 @@
                         style="-fx-background-color: #4caf50; -fx-text-fill: white;" />
             </HBox>
             
-            <ListView fx:id="appointmentsListView" VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);" />
-            
-            <Label text="Right-click on an appointment to delete it" style="-fx-font-size: 11; -fx-text-fill: #757575;" />
+            <TabPane VBox.vgrow="ALWAYS">
+                <Tab text="List View" closable="false">
+                    <VBox spacing="10">
+                        <ListView fx:id="appointmentsListView" VBox.vgrow="ALWAYS" 
+                                  style="-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);" />
+                        <Label text="Right-click on an appointment to delete it" style="-fx-font-size: 11; -fx-text-fill: #757575;" />
+                    </VBox>
+                </Tab>
+                <Tab text="Calendar View" closable="false">
+                    <VBox spacing="10" alignment="CENTER">
+                        <StackPane fx:id="calendarContainer" VBox.vgrow="ALWAYS" />
+                    </VBox>
+                </Tab>
+                <Tab text="Analytics" fx:id="analyticsTab" closable="false">
+                    <VBox spacing="10" alignment="CENTER">
+                        <StackPane fx:id="analyticsContainer" VBox.vgrow="ALWAYS" />
+                    </VBox>
+                </Tab>
+            </TabPane>
         </VBox>
     </center>
     

@@ -17,10 +17,17 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import javafx.scene.control.Tab;
+import javafx.stage.Screen;
+import javafx.geometry.Rectangle2D;
+import javafx.geometry.Insets;
 
 import java.net.URL;
 import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -50,11 +57,27 @@ public class DashboardController implements Initializable {
     @FXML
     private Button logoutButton;
     
+    @FXML
+    private StackPane calendarContainer;
+    
+    @FXML
+    private StackPane analyticsContainer;
+    
+    @FXML
+    private Tab analyticsTab;
+    
+    @FXML
+    private BorderPane rootPane;
+    
     // Observable list to store appointments
     private ObservableList<Appointment> appointments = FXCollections.observableArrayList();
     
     // Database service
     private DatabaseService databaseService;
+    
+    private CalendarView calendarView;
+    
+    private AdminDashboardView adminDashboardView;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -67,14 +90,28 @@ public class DashboardController implements Initializable {
         // Set the appointments list as the data source for the ListView
         appointmentsListView.setItems(appointments);
         
+        // Initialize Calendar View
+        initializeCalendarView();
+        
+        // Initialize Admin Dashboard View
+        initializeAdminDashboardView();
+        
         // Configure UI based on user role
         configureUIForUserRole();
+        
+        // Apply responsive design
+        setupResponsiveDesign();
         
         // Load appointments from the database
         loadAppointmentsFromDatabase();
         
         // Set up context menu for appointment deletion
         setupContextMenu();
+    }
+    
+    private void initializeAdminDashboardView() {
+        adminDashboardView = new AdminDashboardView();
+        analyticsContainer.getChildren().add(adminDashboardView);
     }
     
     private void configureUIForUserRole() {
@@ -92,6 +129,9 @@ public class DashboardController implements Initializable {
                 // Only show admin controls to admins
                 adminControls.setVisible(false);
                 adminControls.setManaged(false);
+                
+                // Hide analytics tab for patients
+                analyticsTab.setDisable(true);
             }
         } else {
             welcomeLabel.setText("Welcome, Guest");
@@ -129,6 +169,41 @@ public class DashboardController implements Initializable {
         });
     }
     
+    private void initializeCalendarView() {
+        calendarView = new CalendarView();
+        calendarContainer.getChildren().add(calendarView);
+        
+        // Set date selection handler
+        calendarView.setOnDateSelected(this::handleDateSelected);
+    }
+    
+    private void handleDateSelected(LocalDate date) {
+        // Set the selected date in the date picker
+        appointmentDatePicker.setValue(date);
+        
+        // Filter appointments for the selected date
+        String dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        
+        // Highlight appointments for the selected date
+        appointmentsListView.getItems().forEach(appointment -> {
+            if (appointment.getDate().equals(dateStr)) {
+                appointmentsListView.getSelectionModel().select(appointment);
+                appointmentsListView.scrollTo(appointment);
+            }
+        });
+        
+        // Show a notification of how many appointments are on this day
+        long count = appointments.stream()
+                .filter(a -> a.getDate().equals(dateStr))
+                .count();
+        
+        if (count > 0) {
+            statusLabel.setText(count + " appointment(s) scheduled for " + dateStr);
+        } else {
+            statusLabel.setText("No appointments scheduled for " + dateStr);
+        }
+    }
+    
     private void loadAppointmentsFromDatabase() {
         try {
             // Clear current appointments
@@ -149,6 +224,12 @@ public class DashboardController implements Initializable {
                 // Add all appointments for admin
                 appointments.addAll(dbAppointments);
             }
+            
+            // Update the calendar view with the appointments
+            calendarView.setAppointments(appointments);
+            
+            // Update admin dashboard with appointments
+            adminDashboardView.updateDashboard(appointments);
             
             statusLabel.setText("Appointments loaded successfully");
         } catch (Exception e) {
@@ -254,6 +335,49 @@ public class DashboardController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
             statusLabel.setText("Error logging out: " + e.getMessage());
+        }
+    }
+    
+    private void setupResponsiveDesign() {
+        // Get the screen size
+        Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
+        double screenWidth = screenBounds.getWidth();
+        
+        // Calculate appropriate sizes based on screen width
+        if (rootPane.getScene() != null) {
+            rootPane.getScene().widthProperty().addListener((obs, oldVal, newVal) -> {
+                adjustLayoutForWidth(newVal.doubleValue());
+            });
+            
+            // Initial adjustment
+            rootPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                if (newScene != null) {
+                    adjustLayoutForWidth(newScene.getWidth());
+                    newScene.getWindow().setOnShown(e -> adjustLayoutForWidth(newScene.getWidth()));
+                }
+            });
+        }
+    }
+    
+    private void adjustLayoutForWidth(double width) {
+        // For smaller screens
+        if (width < 800) {
+            // Adjust the booking form width
+            BorderPane.setMargin(rootPane.getLeft(), new Insets(10, 10, 10, 10));
+            
+            // Make calendar cells smaller
+            if (calendarView != null) {
+                calendarView.setStyle("-fx-font-size: 10px;");
+            }
+            
+        } else {
+            // Default margins for larger screens
+            BorderPane.setMargin(rootPane.getLeft(), new Insets(20, 0, 20, 20));
+            
+            // Reset calendar cell size
+            if (calendarView != null) {
+                calendarView.setStyle("-fx-font-size: 12px;");
+            }
         }
     }
 } 
