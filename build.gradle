@@ -16,6 +16,9 @@ repositories {
 
 dependencies {
     // JavaFX dependencies will be managed by the JavaFX plugin
+    
+    // Also use local JAR files in case the dependencies don't work
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 
 javafx {

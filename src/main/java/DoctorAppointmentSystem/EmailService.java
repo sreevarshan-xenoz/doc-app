@@ -71,22 +71,49 @@ public class EmailService {
         return pendingUser;
     }
     
-    // Simulated email sending for testing
+    // Simulated email sending for testing (with more visible output)
     public static boolean sendVerificationEmail(String toEmail, String otp) {
         try {
             // In a real application, this would send an actual email
-            // For this example, we'll just print to console
-            System.out.println("\n========== SIMULATED EMAIL ==========");
-            System.out.println("To: " + toEmail);
-            System.out.println("Subject: Doctor Appointment System - Email Verification");
-            System.out.println("\nDear User,");
-            System.out.println("\nThank you for registering with Doctor Appointment System.");
-            System.out.println("\nYour verification code is: " + otp);
-            System.out.println("\nThis code will expire in " + OTP_EXPIRY_MINUTES + " minutes.");
-            System.out.println("\nIf you did not request this verification, please ignore this email.");
-            System.out.println("\nRegards,");
-            System.out.println("Doctor Appointment System Team");
-            System.out.println("===================================\n");
+            // For this example, we'll just print to console with enhanced visibility
+            System.out.println("\n");
+            System.out.println("*******************************************************************");
+            System.out.println("**                   VERIFICATION CODE EMAIL                     **");
+            System.out.println("*******************************************************************");
+            System.out.println("** To: " + toEmail);
+            System.out.println("** Subject: Doctor Appointment System - Email Verification");
+            System.out.println("**");
+            System.out.println("** Dear User,");
+            System.out.println("**");
+            System.out.println("** Thank you for registering with Doctor Appointment System.");
+            System.out.println("**");
+            System.out.println("** YOUR VERIFICATION CODE IS: " + otp);
+            System.out.println("**");
+            System.out.println("** This code will expire in " + OTP_EXPIRY_MINUTES + " minutes.");
+            System.out.println("**");
+            System.out.println("** If you did not request this verification, please ignore this email.");
+            System.out.println("**");
+            System.out.println("** Regards,");
+            System.out.println("** Doctor Appointment System Team");
+            System.out.println("*******************************************************************");
+            System.out.println("\n");
+            
+            // Write the code to a file in the temp directory for easy access
+            try {
+                java.io.File tempDir = new java.io.File("temp");
+                if (!tempDir.exists()) {
+                    tempDir.mkdir();
+                }
+                
+                java.io.File otpFile = new java.io.File("temp/verification_code.txt");
+                java.io.FileWriter writer = new java.io.FileWriter(otpFile);
+                writer.write("Verification code for " + toEmail + ": " + otp);
+                writer.close();
+                
+                System.out.println("Verification code also saved to: " + otpFile.getAbsolutePath());
+            } catch (Exception e) {
+                System.err.println("Failed to save verification code to file: " + e.getMessage());
+            }
             
             return true;
         } catch (Exception e) {
