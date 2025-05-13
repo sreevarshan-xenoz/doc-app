@@ -21,6 +21,9 @@ public class Config {
     // Current logged in user
     private static User currentUser;
     
+    // Database Configuration
+    public static final String DB_URL = "jdbc:sqlite:doctorappointment.db";
+    
     static {
         loadEnvVariables();
     }
@@ -66,12 +69,11 @@ public class Config {
                         EMAIL_PASSWORD = envProps.getProperty("EMAIL_PASSWORD").trim();
                     }
                     
-                    System.out.println("Loaded Supabase credentials from .env file");
-                    System.out.println("URL: " + SUPABASE_URL);
-                    System.out.println("API key length: " + SUPABASE_API_KEY.length());
+                    System.out.println("Loaded email configuration from .env file");
                     System.out.println("Email host: " + EMAIL_HOST);
                     System.out.println("Email port: " + EMAIL_PORT);
                     System.out.println("Email username: " + EMAIL_USERNAME);
+                    System.out.println("Email password: " + (EMAIL_PASSWORD.isEmpty() ? "Not set" : "Set"));
                 }
             } else {
                 // If .env file doesn't exist, try to load from environment variables
